@@ -42,3 +42,18 @@ awk -F: '$3>=1000 && $3<65534 {printf "    %s (uid=%s)\n",$1,$3}' /etc/passwd
 
 echo "Пройдено: $PASS, не пройдено: $FAIL"
 [[ $FAIL -eq 0 ]] && exit 0 || exit 1
+
+echo "[4] Веб-сервер"
+
+# а) служба nginx активна
+check "Служба nginx активна" "systemctl is-active --quiet nginx"
+
+# б) конфигурация nginx синтаксически корректна
+check "Конфигурация nginx корректна" "sudo nginx -t"
+
+# в) сертификат истекает не ранее чем через 30 дней
+check "Сертификат действителен более 30 дней" "sudo openssl x509 -checkend 2592000 -noout -in /etc/ssl/certs/devops.crt"
+
+# г) нет файлов, доступных на запись всем, и права ключа 600
+check "Нет файлов с правами o+w" "! find /var/www/devops-site -perm -o+w | grep -q ."
+check "Права ключа 600" "[ \"\$(sudo stat -c '%a' /etc/ssl/private/devops.key)\" = \"600\" ]"
